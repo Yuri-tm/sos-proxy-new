@@ -38,6 +38,11 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
     try {
         const redis = getRedis({ timeoutMs: REDIS_TIMEOUT_MS });
         const response = await fetch(PROXY_URL);
+        if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            throw new Error(`Upstream proxy source failed: ${response.status} ${text.slice(0, 200)}`);
+        }
+
         const text = await response.text();
 
         // Извлекаем ссылки, убираем пробелы и дубликаты
@@ -48,6 +53,9 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
             .map(normalizeProxyLink);
 
         const uniqueLinks = Array.from(new Set(rawLinks)).filter(isValidProxyUrl);
+        if (uniqueLinks.length === 0) {
+            throw new Error('Upstream proxy source returned no valid proxies');
+        }
 
         // Формируем объект для хранения
         const proxyData = uniqueLinks.map(link => ({
@@ -66,6 +74,8 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to fetch proxies from GitHub' });
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Failed to fetch proxies from GitHub'
+        });
     }
 }

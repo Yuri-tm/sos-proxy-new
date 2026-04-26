@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { QRCodeSVG } from 'qrcode.react';
 import { Copy, RefreshCw, CheckCircle, XCircle, ExternalLink, Search, Clock } from 'lucide-react';
 import styles from '../styles/Home.module.css';
+import type { ProxyRecord, ProxyStatus } from '../lib/types';
 import { STATUS_TRANSLATION } from '../lib/types';
 
 interface Proxy {
@@ -13,18 +14,22 @@ interface Proxy {
 
 type Tab = 'все' | 'доступен' | 'недоступен' | 'в процессе проверки';
 
-function sanitizeUrlForDisplay(url: string): string {
-    // Basic sanitization - escape HTML entities
-    return url.replace(/[<>&"']/g, (char) => {
-        const entityMap: Record<string, string> = {
-            '<': '&lt;',
-            '>': '&gt;',
-            '&': '&amp;',
-            '"': '&quot;',
-            "'": '&#x27;'
+function translateStatus(status: ProxyStatus | string): Proxy['status'] {
+    return (STATUS_TRANSLATION[status as ProxyStatus] || status) as Proxy['status'];
+}
+
+function normalizeProxyRecords(data: unknown): Proxy[] {
+    const apiProxies = Array.isArray(data) ? data : ((data as { proxies?: unknown })?.proxies ?? []);
+    if (!Array.isArray(apiProxies)) return [];
+
+    return apiProxies.map((proxy) => {
+        const record = proxy as Partial<ProxyRecord>;
+        return {
+            url: typeof record.url === 'string' ? record.url : '',
+            status: translateStatus(typeof record.status === 'string' ? record.status : 'pending'),
+            lastChecked: typeof record.lastChecked === 'string' ? record.lastChecked : new Date(0).toISOString(),
         };
-        return entityMap[char] || char;
-    });
+    }).filter((proxy) => proxy.url);
 }
 
 function getServerHost(proxyUrl: string): string {
@@ -65,12 +70,7 @@ export default function ProxyBlog() {
             }
 
             const data = await res.json();
-            const apiProxies = Array.isArray(data) ? data : (data?.proxies ?? []);
-            const translatedProxies = apiProxies.map((p: any) => ({
-                ...p,
-                status: STATUS_TRANSLATION[p.status as keyof typeof STATUS_TRANSLATION] || p.status
-            }));
-            setProxies(translatedProxies);
+            setProxies(normalizeProxyRecords(data));
         } catch (err) {
             console.error("Ошибкa при получении прокси", err);
             setProxies([]);
@@ -146,9 +146,8 @@ export default function ProxyBlog() {
                 }
 
                 const data = await res.json();
-                const proxies = Array.isArray(data) ? data : (data?.proxies ?? []);
                 if (!cancelled) {
-                    setProxies(proxies || []);
+                    setProxies(normalizeProxyRecords(data));
                 }
             } catch (err) {
                 console.error("Failed to fetch proxies", err);
@@ -300,7 +299,7 @@ export default function ProxyBlog() {
 
                                 <div className={styles.proxyMeta}>
                                     <span className={`${styles.proxyMetaLabel} ${styles.serverName}`}>{getServerHost(proxy.url)}</span>
-                                    <span className={styles.proxyMetaValue}>{sanitizeUrlForDisplay(proxy.url)}</span>
+                                    <span className={styles.proxyMetaValue}>{proxy.url}</span>
                                 </div>
 
                                 <div className={styles.actions}>
