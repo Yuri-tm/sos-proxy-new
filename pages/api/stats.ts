@@ -1,13 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getRedis } from '../../lib/redis';
-
-type ProxyStatus = 'available' | 'unavailable' | 'pending';
-
-interface ProxyRecord {
-  url: string;
-  status: ProxyStatus;
-  lastChecked: string;
-}
+import type { ProxyRecord } from '../../lib/types';
 
 function safeParseProxies(data: unknown): ProxyRecord[] {
   if (!data) return [];
@@ -26,14 +19,14 @@ function safeParseProxies(data: unknown): ProxyRecord[] {
 const REDIS_TIMEOUT_MS = 30000;
 
 export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
+  // Add security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+
   try {
-    const redis = getRedis({ readOnly: true });
-    const data = await Promise.race([
-      redis.get('mtproto_proxies'),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Redis request timed out')), REDIS_TIMEOUT_MS)
-      ),
-    ]);
+    const redis = getRedis({ readOnly: true, timeoutMs: REDIS_TIMEOUT_MS });
+    const data = await redis.get('mtproto_proxies');
     const proxies = safeParseProxies(data);
 
     let available = 0;
@@ -69,4 +62,3 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
     });
   }
 }
-

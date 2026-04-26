@@ -2,16 +2,25 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import net from 'net';
 import pLimit from 'p-limit';
 import { getRedis } from '../../lib/redis';
+import type { ProxyRecord, ProxyStatus } from '../../lib/types';
 
 const limit = pLimit(10); // Максимум 10 одновременных TCP соединений
 const REDIS_TIMEOUT_MS = 30000;
 
-type ProxyStatus = 'available' | 'unavailable' | 'pending';
+function isValidProxyUrl(url: string): boolean {
+    try {
+        const parsed = new URL(url.replace('tg://proxy', 'http://temp'));
+        const host = parsed.searchParams.get('server');
+        const port = parseInt(parsed.searchParams.get('port') || '0');
 
-interface ProxyRecord {
-    url: string;
-    status: ProxyStatus;
-    lastChecked: string;
+        // Validate port range and host
+        if (port < 1 || port > 65535) return false;
+        if (!host || host.length > 255) return false;
+        if (!/^[a-zA-Z0-9.-]+$/.test(host)) return false;
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 function safeParseProxies(data: unknown): ProxyRecord[] {
@@ -43,9 +52,11 @@ async function checkTcp(proxyUrl: string): Promise<boolean> {
 
         const url = new URL(normalized.replace('tg://proxy', 'http://temp.host'));
         const host = url.searchParams.get('server');
-        const port = parseInt(url.searchParams.get('port') || '0');
+        const portStr = url.searchParams.get('port');
+        const port = portStr ? parseInt(portStr, 10) : 0;
 
-        if (!host || !port) return false;
+        // Validate port range
+        if (!host || port < 1 || port > 65535) return false;
 
         return new Promise((resolve) => {
             const socket = new net.Socket();
@@ -63,15 +74,14 @@ async function checkTcp(proxyUrl: string): Promise<boolean> {
 }
 
 export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
-    try {
-        const redis = getRedis();
+    // Add security headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
 
-        const data: unknown = await Promise.race([
-            redis.get('mtproto_proxies'),
-            new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('Redis request timed out')), REDIS_TIMEOUT_MS)
-            ),
-        ]);
+    try {
+        const redis = getRedis({ timeoutMs: REDIS_TIMEOUT_MS });
+        const data: unknown = await redis.get('mtproto_proxies');
 
         const proxies = safeParseProxies(data);
         if (proxies.length === 0) return res.status(404).json({ error: 'No proxies in database' });
@@ -109,12 +119,10 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
             proxies[u.idx] = u.record;
         }
 
-        await Promise.race([
-            redis.set('mtproto_proxies', JSON.stringify(proxies)),
-            new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('Redis write timed out')), REDIS_TIMEOUT_MS)
-            ),
-        ]);
+        // Filter out invalid proxies to clean up the database
+        const cleanProxies = proxies.filter(p => isValidProxyUrl(p.url));
+
+        await redis.set('mtproto_proxies', JSON.stringify(cleanProxies));
 
         const counts = proxies.reduce(
             (acc, p) => {

@@ -3,14 +3,29 @@ import Head from 'next/head';
 import { QRCodeSVG } from 'qrcode.react';
 import { Copy, RefreshCw, CheckCircle, XCircle, ExternalLink, Search, Clock } from 'lucide-react';
 import styles from '../styles/Home.module.css';
+import { STATUS_TRANSLATION } from '../lib/types';
 
 interface Proxy {
     url: string;
-    status: 'available' | 'unavailable' | 'pending';
+    status: 'доступен' | 'недоступен' | 'в процессе проверки';
     lastChecked: string;
 }
 
-type Tab = 'all' | 'available' | 'unavailable' | 'pending';
+type Tab = 'все' | 'доступен' | 'недоступен' | 'в процессе проверки';
+
+function sanitizeUrlForDisplay(url: string): string {
+    // Basic sanitization - escape HTML entities
+    return url.replace(/[<>&"']/g, (char) => {
+        const entityMap: Record<string, string> = {
+            '<': '&lt;',
+            '>': '&gt;',
+            '&': '&amp;',
+            '"': '&quot;',
+            "'": '&#x27;'
+        };
+        return entityMap[char] || char;
+    });
+}
 
 function getServerHost(proxyUrl: string): string {
     try {
@@ -28,12 +43,12 @@ export default function ProxyBlog() {
     const [proxies, setProxies] = useState<Proxy[]>([]);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
-    const [tab, setTab] = useState<Tab>('all');
+    const [tab, setTab] = useState<Tab>('все');
     const [query, setQuery] = useState('');
 
-    const availableCount = proxies.filter((proxy) => proxy.status === 'available').length;
-    const unavailableCount = proxies.filter((proxy) => proxy.status === 'unavailable').length;
-    const pendingCount = proxies.filter((proxy) => proxy.status === 'pending').length;
+    const availableCount = proxies.filter((proxy) => proxy.status === 'доступен').length;
+    const unavailableCount = proxies.filter((proxy) => proxy.status === 'недоступен').length;
+    const pendingCount = proxies.filter((proxy) => proxy.status === 'в процессе проверки').length;
 
     const fetchData = async () => {
         setLoading(true);
@@ -50,10 +65,14 @@ export default function ProxyBlog() {
             }
 
             const data = await res.json();
-            const proxies = Array.isArray(data) ? data : (data?.proxies ?? []);
-            setProxies(proxies || []);
+            const apiProxies = Array.isArray(data) ? data : (data?.proxies ?? []);
+            const translatedProxies = apiProxies.map((p: any) => ({
+                ...p,
+                status: STATUS_TRANSLATION[p.status as keyof typeof STATUS_TRANSLATION] || p.status
+            }));
+            setProxies(translatedProxies);
         } catch (err) {
-            console.error("Failed to fetch proxies", err);
+            console.error("Ошибкa при получении прокси", err);
             setProxies([]);
         } finally {
             setLoading(false);
@@ -67,11 +86,11 @@ export default function ProxyBlog() {
             const pingRes = await fetch('/api/check-ping');
             if (!pingRes.ok) {
                 const text = await pingRes.text().catch(() => '');
-                throw new Error(`check-ping failed: ${pingRes.status} ${text.slice(0, 200)}`);
+                throw new Error(`Ошибкa при проверке пинга: ${pingRes.status} ${text.slice(0, 200)}`);
             }
             await fetchData();
         } catch (err) {
-            console.error("Update failed", err);
+            console.error("Ошибкa при обновлении", err);
         } finally {
             setUpdating(false);
         }
@@ -83,11 +102,11 @@ export default function ProxyBlog() {
             const res = await fetch('/api/cron-fetch');
             if (!res.ok) {
                 const text = await res.text().catch(() => '');
-                throw new Error(`cron-fetch failed: ${res.status} ${text.slice(0, 200)}`);
+                throw new Error(`Ошибкa при обновлении cron: ${res.status} ${text.slice(0, 200)}`);
             }
             await fetchData();
         } catch (err) {
-            console.error("Refetch failed", err);
+            console.error("Ошибкa при обновлении", err);
         } finally {
             setUpdating(false);
         }
@@ -95,13 +114,13 @@ export default function ProxyBlog() {
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
-        alert("Link copied to clipboard!");
+        alert("Ссылка скопирована в буфер обмена!");
     };
 
     const normalizedQuery = query.trim().toLowerCase();
     const filtered = proxies
         .filter((p) => {
-            if (tab === 'all') return true;
+            if (tab === 'все') return true;
             return p.status === tab;
         })
         .filter((p) => {
@@ -151,17 +170,17 @@ export default function ProxyBlog() {
     return (
         <div className={styles.page}>
             <Head>
-                <title>Telegram Proxy Servers</title>
-                <meta name="description" content="Fresh Telegram MTProto Proxies" />
+                <title>Прокси серверы Telegram</title>
+                <meta name="description" content="Свежие прокси MTProto для Telegram" />
             </Head>
 
             <header className={styles.header}>
                 <div className={styles.headerInner}>
                     <div>
-                        <p className={styles.eyebrow}>MTProto Proxy Directory</p>
-                        <h1 className={styles.title}>Telegram Proxy Servers</h1>
+                        <p className={styles.eyebrow}>MTProto</p>
+                        <h1 className={styles.title}>Бесплатные прокси для Telegram</h1>
                         <p className={styles.subtitle}>
-                            Live-updated list of MTProto proxy servers. Click any link or scan the QR code to connect directly in Telegram.
+                            Список обновляется автоматически. Нажмите на ссылку или сканируйте QR-код для подключения напрямую в Telegram.
                         </p>
                     </div>
                     <div className={styles.actionsInline}>
@@ -171,7 +190,7 @@ export default function ProxyBlog() {
                             className={styles.ghostButton}
                         >
                             <RefreshCw className={updating ? styles.spinning : ''} size={18} />
-                            Refetch list
+                            Обновить список
                         </button>
                         <button
                             onClick={handleCheckAvailability}
@@ -179,7 +198,7 @@ export default function ProxyBlog() {
                             className={`${styles.ghostButton} ${styles.primaryButton}`}
                         >
                             <CheckCircle size={18} />
-                            Check availability
+                            Проверить доступность
                         </button>
                     </div>
                 </div>
@@ -188,19 +207,19 @@ export default function ProxyBlog() {
             <main className={styles.main}>
                 <section className={styles.summaryBar}>
                     <div className={styles.summaryCard}>
-                        <span className={styles.summaryLabel}>total</span>
+                        <span className={styles.summaryLabel}>всего</span>
                         <span className={styles.summaryValue}>{proxies.length}</span>
                     </div>
                     <div className={styles.summaryCard}>
-                        <span className={styles.summaryLabel}>available</span>
+                        <span className={styles.summaryLabel}>доступен</span>
                         <span className={styles.summaryValue}>{availableCount}</span>
                     </div>
                     <div className={styles.summaryCard}>
-                        <span className={styles.summaryLabel}>unavailable</span>
+                        <span className={styles.summaryLabel}>недоступен</span>
                         <span className={styles.summaryValue}>{unavailableCount}</span>
                     </div>
                     <div className={styles.summaryCard}>
-                        <span className={styles.summaryLabel}>pending</span>
+                        <span className={styles.summaryLabel}>в процессе проверки</span>
                         <span className={styles.summaryValue}>{pendingCount}</span>
                     </div>
                 </section>
@@ -210,31 +229,31 @@ export default function ProxyBlog() {
                         <div className={styles.tabs}>
                             <button
                                 type="button"
-                                className={`${styles.tab} ${tab === 'all' ? styles.tabActive : ''}`}
-                                onClick={() => setTab('all')}
+                                className={`${styles.tab} ${tab === 'все' ? styles.tabActive : ''}`}
+                                onClick={() => setTab('все')}
                             >
-                                All
+                                Все
                             </button>
                             <button
                                 type="button"
-                                className={`${styles.tab} ${tab === 'available' ? styles.tabActive : ''}`}
-                                onClick={() => setTab('available')}
+                                className={`${styles.tab} ${tab === 'доступен' ? styles.tabActive : ''}`}
+                                onClick={() => setTab('доступен')}
                             >
-                                Available
+                                Доступные
                             </button>
                             <button
                                 type="button"
-                                className={`${styles.tab} ${tab === 'unavailable' ? styles.tabActive : ''}`}
-                                onClick={() => setTab('unavailable')}
+                                className={`${styles.tab} ${tab === 'недоступен' ? styles.tabActive : ''}`}
+                                onClick={() => setTab('недоступен')}
                             >
-                                Unavailable
+                                Недоступные
                             </button>
                             <button
                                 type="button"
-                                className={`${styles.tab} ${tab === 'pending' ? styles.tabActive : ''}`}
-                                onClick={() => setTab('pending')}
+                                className={`${styles.tab} ${tab === 'в процессе проверки' ? styles.tabActive : ''}`}
+                                onClick={() => setTab('в процессе проверки')}
                             >
-                                Unchecked
+                                Не проверенные
                             </button>
                         </div>
 
@@ -243,34 +262,31 @@ export default function ProxyBlog() {
                             <input
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
-                                placeholder="Search by host..."
+                                placeholder="Поиск хоста..."
                                 className={styles.searchInput}
-                                aria-label="Search by host"
+                                aria-label="Поиск по хосту"
                             />
                         </div>
                     </div>
 
                     <div className={styles.panelBottom}>
-                        <div className={styles.muted}>Showing {filtered.length} of {proxies.length} proxies</div>
-                        <div className={styles.muted}>
-                            Source: <a href="https://github.com/Grim1313/mtproto-for-telegram" target="_blank" rel="noreferrer">github.com/Grim1313/mtproto-for-telegram</a>
-                        </div>
+                        <div className={styles.muted}>Показано {filtered.length} из {proxies.length} прокси</div>
                     </div>
                 </section>
 
                 {loading && proxies.length === 0 ? (
                     <div className={styles.loading}>
-                        <div>Loading proxies...</div>
+                        <div>Загружаю прокси...</div>
                     </div>
                 ) : (
                     <div className={styles.grid}>
                         {filtered.map((proxy, idx) => (
                             <article key={idx} className={styles.card}>
                                 <div className={styles.cardTop}>
-                                    <span className={`${styles.status} ${proxy.status === 'available' ? styles.available :
-                                            proxy.status === 'unavailable' ? styles.unavailable : styles.pending
+                                    <span className={`${styles.status} ${proxy.status === 'доступен' ? styles.available :
+                                        proxy.status === 'недоступен' ? styles.unavailable : styles.pending
                                         }`}>
-                                        {proxy.status === 'available' ? <CheckCircle size={12} /> : proxy.status === 'unavailable' ? <XCircle size={12} /> : <Clock size={12} />}
+                                        {proxy.status === 'доступен' ? <CheckCircle size={12} /> : proxy.status === 'недоступен' ? <XCircle size={12} /> : <Clock size={12} />}
                                         {proxy.status}
                                     </span>
                                     <span className={styles.time}>
@@ -284,7 +300,7 @@ export default function ProxyBlog() {
 
                                 <div className={styles.proxyMeta}>
                                     <span className={`${styles.proxyMetaLabel} ${styles.serverName}`}>{getServerHost(proxy.url)}</span>
-                                    <span className={styles.proxyMetaValue}>{proxy.url}</span>
+                                    <span className={styles.proxyMetaValue}>{sanitizeUrlForDisplay(proxy.url)}</span>
                                 </div>
 
                                 <div className={styles.actions}>
@@ -292,7 +308,7 @@ export default function ProxyBlog() {
                                         onClick={() => copyToClipboard(proxy.url)}
                                         className={styles.actionSecondary}
                                     >
-                                        <Copy size={16} /> Copy Code
+                                        <Copy size={16} /> Копировать
                                     </button>
                                     <a
                                         href={proxy.url}
@@ -300,7 +316,7 @@ export default function ProxyBlog() {
                                         rel="noopener noreferrer"
                                         className={styles.actionPrimary}
                                     >
-                                        <ExternalLink size={16} /> Connect
+                                        <ExternalLink size={16} /> Подключиться
                                     </a>
                                 </div>
                             </article>
@@ -310,7 +326,7 @@ export default function ProxyBlog() {
 
                 {!loading && proxies.length === 0 && (
                     <div className={styles.empty}>
-                        <p>No proxies found. Click "Update Status" to fetch.</p>
+                        <p>Прокси не найдены. Нажмите "Обновить список", чтобы получить данные.</p>
                     </div>
                 )}
             </main>
