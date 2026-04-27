@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, RefreshCw, CheckCircle, XCircle, ExternalLink, Search, Clock, Server, Wifi, WifiOff, CircleDot } from 'lucide-react';
+import { RefreshCw, CheckCircle, XCircle, ExternalLink, Search, Clock, Server, Wifi, WifiOff, CircleDot, Copy } from 'lucide-react';
 import styles from '../styles/Home.module.css';
 import type { ProxyRecord, ProxyStatus } from '../lib/types';
 import { STATUS_TRANSLATION } from '../lib/types';
@@ -308,18 +308,22 @@ export default function ProxyBlog() {
                                     <QRCodeSVG value={proxy.url} size={140} includeMargin={true} />
                                 </div>
 
-                                <div className={styles.proxyMeta}>
-                                    <span className={`${styles.proxyMetaLabel} ${styles.serverName}`}>{getServerHost(proxy.url)}</span>
+                                <button
+                                    type="button"
+                                    className={styles.proxyMeta}
+                                    onClick={() => copyToClipboard(proxy.url)}
+                                    aria-label={`Скопировать ссылку прокси ${getServerHost(proxy.url)}`}
+                                >
+                                    <span className={styles.proxyMetaTop}>
+                                        <span className={`${styles.proxyMetaLabel} ${styles.serverName}`}>{getServerHost(proxy.url)}</span>
+                                        <span className={styles.proxyMetaIcon} aria-hidden="true">
+                                            <Copy size={15} />
+                                        </span>
+                                    </span>
                                     <span className={styles.proxyMetaValue}>{proxy.url}</span>
-                                </div>
+                                </button>
 
                                 <div className={styles.actions}>
-                                    <button
-                                        onClick={() => copyToClipboard(proxy.url)}
-                                        className={styles.actionSecondary}
-                                    >
-                                        <Copy size={16} /> Копировать
-                                    </button>
                                     <a
                                         href={proxy.url}
                                         target="_blank"

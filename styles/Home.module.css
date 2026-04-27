@@ -433,10 +433,39 @@
 }
 
 .proxyMeta {
+  display: block;
+  width: 100%;
   padding: 0.85rem 0.95rem;
   border-radius: 18px;
   background: rgba(2, 6, 23, 0.35);
   border: 1px solid rgba(148, 163, 184, 0.14);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.proxyMeta:hover {
+  transform: translateY(-1px);
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(8, 18, 35, 0.5);
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.28);
+}
+
+.proxyMeta:focus-visible {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);
+}
+
+.proxyMetaTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .proxyMetaLabel {
@@ -444,6 +473,27 @@
   margin-bottom: 0.35rem;
   font-size: 0.78rem;
   color: rgba(148, 163, 184, 0.9);
+}
+
+.proxyMetaIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.58);
+  color: rgba(226, 232, 240, 0.82);
+  flex-shrink: 0;
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+
+.proxyMeta:hover .proxyMetaIcon,
+.proxyMeta:focus-visible .proxyMetaIcon {
+  border-color: rgba(56, 189, 248, 0.34);
+  color: rgba(125, 211, 252, 0.98);
+  background: rgba(10, 25, 47, 0.72);
 }
 
 .proxyMetaValue {
