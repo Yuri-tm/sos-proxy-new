@@ -6,7 +6,10 @@ import '../styles/globals.css';
 
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+    const isInstallableContext =
+      window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+
+    if ('serviceWorker' in navigator && isInstallableContext) {
       navigator.serviceWorker.register('/sw.js').then((registration) => {
         // Check for updates every time the app loads
         registration.update();

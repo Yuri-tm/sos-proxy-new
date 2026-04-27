@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { QRCodeSVG } from 'qrcode.react';
-import { RefreshCw, CheckCircle, XCircle, ExternalLink, Search, Clock, Server, Wifi, WifiOff, CircleDot, Copy } from 'lucide-react';
+import { RefreshCw, CheckCircle, XCircle, ExternalLink, Clock, Server, Wifi, WifiOff, CircleDot, Copy, Download } from 'lucide-react';
 import styles from '../styles/Home.module.css';
 import type { ProxyRecord, ProxyStatus } from '../lib/types';
 import { STATUS_TRANSLATION } from '../lib/types';
@@ -13,6 +13,11 @@ interface Proxy {
 }
 
 type Tab = 'все' | 'доступен' | 'недоступен' | 'в процессе проверки';
+
+interface BeforeInstallPromptEvent extends Event {
+    prompt: () => Promise<void>;
+    userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
 
 function translateStatus(status: ProxyStatus | string): Proxy['status'] {
     return (STATUS_TRANSLATION[status as ProxyStatus] || status) as Proxy['status'];
@@ -48,6 +53,8 @@ export default function ProxyBlog() {
     const [proxies, setProxies] = useState<Proxy[]>([]);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
+    const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+    const [isInstalling, setIsInstalling] = useState(false);
     const [tab, setTab] = useState<Tab>('доступен');
     const [query, setQuery] = useState('');
 
@@ -166,6 +173,46 @@ export default function ProxyBlog() {
         };
     }, []);
 
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (event: Event) => {
+            event.preventDefault();
+            setInstallPrompt(event as BeforeInstallPromptEvent);
+        };
+
+        const handleAppInstalled = () => {
+            setInstallPrompt(null);
+            setIsInstalling(false);
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.addEventListener('appinstalled', handleAppInstalled);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            window.removeEventListener('appinstalled', handleAppInstalled);
+        };
+    }, []);
+
+    const handleInstallApp = async () => {
+        if (!installPrompt) return;
+
+        setIsInstalling(true);
+
+        try {
+            await installPrompt.prompt();
+            const choice = await installPrompt.userChoice;
+
+            if (choice.outcome !== 'accepted') {
+                setIsInstalling(false);
+            }
+        } catch (error) {
+            console.error('Install prompt failed:', error);
+            setIsInstalling(false);
+        } finally {
+            setInstallPrompt(null);
+        }
+    };
+
     return (
         <div className={styles.page}>
             <Head>
@@ -221,6 +268,16 @@ export default function ProxyBlog() {
                         </div>
 
                         <div className={styles.summaryActions}>
+                            {installPrompt && (
+                                <button
+                                    onClick={handleInstallApp}
+                                    disabled={isInstalling}
+                                    className={`${styles.ghostButton} ${styles.primaryButton}`}
+                                >
+                                    <Download size={18} />
+                                    {isInstalling ? 'Установка...' : 'Установить приложение'}
+                                </button>
+                            )}
                             <button
                                 onClick={handleRefetch}
                                 disabled={updating}
