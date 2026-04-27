@@ -24,7 +24,7 @@
 }
 
 .header {
-  position: sticky;
+  position: relative;
   top: 0;
   z-index: 10;
   padding: 1rem 1.5rem;
@@ -114,29 +114,106 @@
 }
 
 .summaryBar {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
-.summaryCard {
-  padding: 1rem 1.1rem;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 20px;
-  background: rgba(15, 23, 42, 0.55);
+.summaryPane {
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(8, 18, 35, 0.96), rgba(7, 15, 30, 0.92)),
+    rgba(15, 23, 42, 0.55);
   box-shadow: 0 20px 60px rgba(2, 6, 23, 0.45);
+  overflow: hidden;
+}
+
+.summaryStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.summaryItem {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 1rem 1.15rem;
+  min-width: 0;
+  position: relative;
+}
+
+.summaryItem + .summaryItem {
+  border-left: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.summaryItemPending {
+  grid-column: 1 / -1;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.summaryItemPending .summaryLabel,
+.summaryItemPending .summaryValue {
+  color: rgba(191, 219, 254, 0.92);
+}
+
+.summaryIconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.summaryIconTotal {
+  color: rgba(125, 211, 252, 0.95);
+}
+
+.summaryIconAvailable {
+  color: rgba(45, 212, 191, 0.95);
+}
+
+.summaryIconUnavailable {
+  color: rgba(248, 113, 113, 0.95);
+}
+
+.summaryIconPending {
+  color: rgba(148, 163, 184, 0.92);
+}
+
+.pendingPulse {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.95);
+  box-shadow: 0 0 0 0 rgba(148, 163, 184, 0.5);
+  animation: pendingPulse 1.9s ease-out infinite;
+}
+
+.summaryActions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.95rem 1.15rem 1.1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  flex-wrap: wrap;
+}
+
+.summaryActions .ghostButton,
+.summaryActions .primaryButton {
+  border-radius: 12px;
+  padding: 0.72rem 1rem;
+}
+
+.summaryActions .primaryButton {
+  border-color: rgba(34, 211, 238, 0.45);
+  color: rgba(103, 232, 249, 0.98);
 }
 
 .summaryLabel {
-  display: block;
-  margin-bottom: 0.35rem;
   font-size: 0.8rem;
-  color: rgba(148, 163, 184, 0.88);
+  color: rgba(226, 232, 240, 0.72);
+  white-space: nowrap;
 }
 
 .summaryValue {
-  font-size: 1.65rem;
+  font-size: 1rem;
   font-weight: 800;
   color: rgba(226, 232, 240, 0.98);
 }
@@ -155,65 +232,78 @@
 }
 
 .panel {
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 22px;
-  background: rgba(2, 6, 23, 0.35);
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(8, 18, 35, 0.96), rgba(7, 15, 30, 0.92)),
+    rgba(2, 6, 23, 0.35);
   box-shadow: 0 18px 70px rgba(2, 6, 23, 0.55);
-  padding: 1rem;
+  padding: 0.9rem;
   margin-bottom: 1.25rem;
 }
 
 .panelTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 0.75rem;
 }
 
 .tabs {
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+  padding: 0.35rem;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 12px;
+  background: rgba(9, 16, 31, 0.88);
 }
 
 .tab {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.55rem 0.8rem;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(15, 23, 42, 0.55);
-  color: rgba(226, 232, 240, 0.9);
+  padding: 0.52rem 0.9rem;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(148, 163, 184, 0.9);
   cursor: pointer;
-  font-size: 0.85rem;
-  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
+  font-size: 0.9rem;
+  font-weight: 400;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .tab:hover {
   transform: translateY(-1px);
+  color: rgba(226, 232, 240, 0.96);
 }
 
 .tabActive {
-  border-color: rgba(56, 189, 248, 0.45);
-  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(34, 211, 238, 0.35);
+  background: linear-gradient(180deg, rgba(34, 211, 238, 0.95), rgba(6, 182, 212, 0.86));
+  color: rgba(8, 15, 30, 0.98);
+  box-shadow: 0 10px 24px rgba(6, 182, 212, 0.22);
 }
 
 .searchWrap {
   position: relative;
-  min-width: min(420px, 100%);
+  min-width: 100%;
   flex: 1;
 }
 
 .searchInput {
   width: 100%;
-  padding: 0.75rem 0.9rem 0.75rem 2.55rem;
-  border-radius: 14px;
+  padding: 0.78rem 0.95rem 0.78rem 2.55rem;
+  border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(10, 17, 32, 0.78);
   color: rgba(226, 232, 240, 0.92);
   outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 
 .searchInput:focus {
@@ -417,14 +507,39 @@
   }
 }
 
+@keyframes pendingPulse {
+  0% {
+    transform: scale(0.92);
+    box-shadow: 0 0 0 0 rgba(148, 163, 184, 0.45);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(148, 163, 184, 0);
+  }
+
+  100% {
+    transform: scale(0.92);
+    box-shadow: 0 0 0 0 rgba(148, 163, 184, 0);
+  }
+}
+
 @media (max-width: 768px) {
   .headerInner {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .summaryBar {
-    grid-template-columns: 1fr;
+  .summaryStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summaryItem:nth-child(3) {
+    border-left: none;
+  }
+
+  .summaryItemPending {
+    grid-column: 1 / -1;
   }
 
   .panelTop {
@@ -434,5 +549,20 @@
 
   .searchWrap {
     min-width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .summaryStats {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryItem + .summaryItem {
+    border-left: none;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  .summaryActions {
+    flex-direction: column;
   }
 }

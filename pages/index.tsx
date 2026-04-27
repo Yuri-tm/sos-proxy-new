@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, RefreshCw, CheckCircle, XCircle, ExternalLink, Search, Clock } from 'lucide-react';
+import { Copy, RefreshCw, CheckCircle, XCircle, ExternalLink, Search, Clock, Server, Wifi, WifiOff, CircleDot } from 'lucide-react';
 import styles from '../styles/Home.module.css';
 import type { ProxyRecord, ProxyStatus } from '../lib/types';
 import { STATUS_TRANSLATION } from '../lib/types';
@@ -48,7 +48,7 @@ export default function ProxyBlog() {
     const [proxies, setProxies] = useState<Proxy[]>([]);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
-    const [tab, setTab] = useState<Tab>('все');
+    const [tab, setTab] = useState<Tab>('доступен');
     const [query, setQuery] = useState('');
 
     const availableCount = proxies.filter((proxy) => proxy.status === 'доступен').length;
@@ -182,44 +182,62 @@ export default function ProxyBlog() {
                             Список обновляется автоматически. Нажмите на ссылку или сканируйте QR-код для подключения напрямую в Telegram.
                         </p>
                     </div>
-                    <div className={styles.actionsInline}>
-                        <button
-                            onClick={handleRefetch}
-                            disabled={updating}
-                            className={styles.ghostButton}
-                        >
-                            <RefreshCw className={updating ? styles.spinning : ''} size={18} />
-                            Обновить список
-                        </button>
-                        <button
-                            onClick={handleCheckAvailability}
-                            disabled={updating || proxies.length === 0}
-                            className={`${styles.ghostButton} ${styles.primaryButton}`}
-                        >
-                            <CheckCircle size={18} />
-                            Проверить доступность
-                        </button>
-                    </div>
                 </div>
             </header>
 
             <main className={styles.main}>
                 <section className={styles.summaryBar}>
-                    <div className={styles.summaryCard}>
-                        <span className={styles.summaryLabel}>всего</span>
-                        <span className={styles.summaryValue}>{proxies.length}</span>
-                    </div>
-                    <div className={styles.summaryCard}>
-                        <span className={styles.summaryLabel}>доступен</span>
-                        <span className={styles.summaryValue}>{availableCount}</span>
-                    </div>
-                    <div className={styles.summaryCard}>
-                        <span className={styles.summaryLabel}>недоступен</span>
-                        <span className={styles.summaryValue}>{unavailableCount}</span>
-                    </div>
-                    <div className={styles.summaryCard}>
-                        <span className={styles.summaryLabel}>в процессе проверки</span>
-                        <span className={styles.summaryValue}>{pendingCount}</span>
+                    <div className={styles.summaryPane}>
+                        <div className={styles.summaryStats}>
+                            <div className={styles.summaryItem}>
+                                <span className={`${styles.summaryIconWrap} ${styles.summaryIconTotal}`}>
+                                    <Server size={15} />
+                                </span>
+                                <span className={styles.summaryValue}>{proxies.length}</span>
+                                <span className={styles.summaryLabel}>всего</span>
+                            </div>
+                            <div className={styles.summaryItem}>
+                                <span className={`${styles.summaryIconWrap} ${styles.summaryIconAvailable}`}>
+                                    <Wifi size={15} />
+                                </span>
+                                <span className={styles.summaryValue}>{availableCount}</span>
+                                <span className={styles.summaryLabel}>доступных</span>
+                            </div>
+                            <div className={styles.summaryItem}>
+                                <span className={`${styles.summaryIconWrap} ${styles.summaryIconUnavailable}`}>
+                                    <WifiOff size={15} />
+                                </span>
+                                <span className={styles.summaryValue}>{unavailableCount}</span>
+                                <span className={styles.summaryLabel}>недоступных</span>
+                            </div>
+                            <div className={`${styles.summaryItem} ${styles.summaryItemPending}`}>
+                                <span className={styles.pendingPulse} aria-hidden="true" />
+                                <span className={`${styles.summaryIconWrap} ${styles.summaryIconPending}`}>
+                                    <CircleDot size={15} />
+                                </span>
+                                <span className={styles.summaryValue}>{pendingCount}</span>
+                                <span className={styles.summaryLabel}>в ожидании</span>
+                            </div>
+                        </div>
+
+                        <div className={styles.summaryActions}>
+                            <button
+                                onClick={handleRefetch}
+                                disabled={updating}
+                                className={styles.ghostButton}
+                            >
+                                <RefreshCw className={updating ? styles.spinning : ''} size={18} />
+                                Обновить список
+                            </button>
+                            <button
+                                onClick={handleCheckAvailability}
+                                disabled={updating || proxies.length === 0}
+                                className={`${styles.ghostButton} ${styles.primaryButton}`}
+                            >
+                                <Wifi size={18} />
+                                Проверить доступность
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -242,17 +260,10 @@ export default function ProxyBlog() {
                             </button>
                             <button
                                 type="button"
-                                className={`${styles.tab} ${tab === 'недоступен' ? styles.tabActive : ''}`}
-                                onClick={() => setTab('недоступен')}
-                            >
-                                Недоступные
-                            </button>
-                            <button
-                                type="button"
                                 className={`${styles.tab} ${tab === 'в процессе проверки' ? styles.tabActive : ''}`}
                                 onClick={() => setTab('в процессе проверки')}
                             >
-                                Не проверенные
+                                Не проверено
                             </button>
                         </div>
 
@@ -261,9 +272,9 @@ export default function ProxyBlog() {
                             <input
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
-                                placeholder="Поиск хоста..."
+                                placeholder="Search by host..."
                                 className={styles.searchInput}
-                                aria-label="Поиск по хосту"
+                                aria-label="Search by host"
                             />
                         </div>
                     </div>

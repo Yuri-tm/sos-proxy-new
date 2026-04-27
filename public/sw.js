@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sos-proxy-cache-v1';
+const CACHE_NAME = 'sos-proxy-cache-v2';
 const ASSETS_TO_CACHE = ['/', '/favicon.svg', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -23,6 +23,13 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
+
+    // Don't cache API calls or JavaScript modules
+    if (event.request.url.includes('/api/') ||
+        event.request.url.includes('/_next/static/') ||
+        event.request.url.includes('node_modules')) {
+        return;
+    }
 
     event.respondWith(
         caches.match(event.request).then((cached) => cached || fetch(event.request))
