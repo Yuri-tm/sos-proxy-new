@@ -266,17 +266,6 @@ export default function ProxyBlog() {
                                 Не проверено
                             </button>
                         </div>
-
-                        <div className={styles.searchWrap}>
-                            <Search size={16} className={styles.searchIcon} />
-                            <input
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                placeholder="Search by host..."
-                                className={styles.searchInput}
-                                aria-label="Search by host"
-                            />
-                        </div>
                     </div>
 
                     <div className={styles.panelBottom}>

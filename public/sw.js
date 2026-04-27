@@ -1,5 +1,5 @@
 const CACHE_NAME = 'sos-proxy-cache-v2';
-const ASSETS_TO_CACHE = ['/', '/favicon.svg', '/manifest.json'];
+const ASSETS_TO_CACHE = ['/favicon.svg', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -24,10 +24,25 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
 
-    // Don't cache API calls or JavaScript modules
-    if (event.request.url.includes('/api/') ||
+    const requestUrl = new URL(event.request.url);
+    if (requestUrl.pathname === '/sw.js' ||
+        event.request.url.includes('/api/') ||
         event.request.url.includes('/_next/static/') ||
         event.request.url.includes('node_modules')) {
+        return;
+    }
+
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    if (!response || response.status !== 200 || response.type !== 'basic') {
+                        return response;
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
         return;
     }
 
